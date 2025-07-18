@@ -34,20 +34,29 @@ public class FaturamentoPeriodService {
         return null;
     }
 
-    public List<String> calcularPeriodosPorDatas(List<LocalDate> datas)
-    {
+public List<String> calcularPeriodosPorDatas(List<LocalDate> datas) {
         List<String> resultado = new ArrayList<>();
+
         for (LocalDate data : datas) {
             List<Periodo> periodos = getPeriodosDoAno(data.getYear());
+            boolean encontrado = false;
+
             for (Periodo p : periodos) {
                 if (!data.isBefore(p.inicio) && !data.isAfter(p.fim)) {
                     resultado.add(p.periodId + " ==> Data: " + data);
-                    break; // pula para próxima data após encontrar o período
+                    encontrado = true;
+                    break;
                 }
             }
+
+            if (!encontrado) {
+                resultado.add("Sem período para data: " + data);
+            }
         }
+
         return resultado;
     }
+
     private List<Periodo> calcularTodosPeriodos(int ano) {
         List<Periodo> periodos = new ArrayList<>();
         LocalDate inicio = LocalDate.of(ano, 1, 1);
@@ -55,11 +64,21 @@ public class FaturamentoPeriodService {
 
         int contador = 1;
         LocalDate atual = inicio;
+
         while (!atual.isAfter(fim)) {
             LocalDate proximo = proximoInicioPeriodo(atual.plusDays(1), fim);
-            if (proximo == null || proximo.isBefore(atual)) break;
-            LocalDate termino = proximo.minusDays(1);
+
+            // Se não houver próximo, o término será até o final do ano
+            LocalDate termino;
+            if (proximo == null || proximo.isBefore(atual) || proximo.isAfter(fim)) {
+                termino = fim;
+                periodos.add(new Periodo("%d-%d".formatted(ano, contador++), atual, termino));
+                break; // fim dos períodos
+            }
+
+            termino = proximo.minusDays(1);
             if (termino.isAfter(fim)) termino = fim;
+
             periodos.add(new Periodo("%d-%d".formatted(ano, contador++), atual, termino));
             atual = proximo;
         }
@@ -73,7 +92,8 @@ public class FaturamentoPeriodService {
                 return d;
             }
         }
-        return null;
+        // Garante que o último dia seja considerado como início de período, se nenhum outro encontrado
+        return max.isAfter(inicio) ? max : null;
     }
 
     public record Periodo(String periodId, LocalDate inicio, LocalDate fim) {}
