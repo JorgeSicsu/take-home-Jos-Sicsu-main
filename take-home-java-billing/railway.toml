@@ -1,2 +1,2 @@
 [build]
-dockerfile = "take-home-java-billing/Dockerfile"
+builder = "docker"
