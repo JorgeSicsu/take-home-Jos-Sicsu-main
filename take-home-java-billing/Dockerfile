@@ -1,17 +1,26 @@
 # Usa uma imagem base leve com Java 17
 FROM eclipse-temurin:17-jdk-alpine
 
-# Define o diretório de trabalho dentro do container
+# Instala dependências necessárias para o Gradle Wrapper funcionar (bash e curl)
+RUN apk add --no-cache bash curl
+
+# Define o diretório de trabalho
 WORKDIR /app
 
-# Copia todos os arquivos do projeto para dentro do container
+# Copia o wrapper primeiro (melhora cache do Docker)
+COPY gradlew gradlew
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+
+# Copia o restante do código
 COPY . .
 
-# Constrói o projeto usando o Gradle Wrapper
-RUN ./gradlew build --no-daemon
+# Constrói o projeto com o Gradle Wrapper
+RUN chmod +x gradlew && ./gradlew build --no-daemon
 
-# Expõe a porta usada pela aplicação Spring Boot (ajuste se diferente)
+# Expõe a porta usada pela aplicação
 EXPOSE 8080
 
-# Executa o JAR gerado após o build
+# Define o comando de inicialização
 CMD ["java", "-jar", "build/libs/take-home-java-billing-0.0.1-SNAPSHOT.jar"]
